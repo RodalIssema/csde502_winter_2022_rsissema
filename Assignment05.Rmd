@@ -1,0 +1,96 @@
+---
+title: "Assignment 05"
+author: "Rodal Issema"
+date: "2/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+pacman::p_load(tidyverse, magrittr, ISOcodes, HMDHFDplus, keyring)
+```
+
+## R Markdown
+
+```{r}
+# HFD country codes
+hfdcodes <- getHFDcountries() %>% tibble(ccode = .)
+
+# ISO country codes
+isocodes <- ISO_3166_1 %>% tibble() %>% select(ccode = Alpha_3, Name)
+
+# join ISO codes with country names
+hfdcodes %<>% 
+  left_join(isocodes, by = "ccode") %>% 
+  mutate(Name = 
+        case_when(ccode == "FRATNP" ~  "France",
+                  ccode == "DEUTNP" ~  "Germany",
+                  ccode == "DEUTE" ~   "East Germany",
+                  ccode == "DEUTW" ~   "West Germany",
+                  ccode == "GBR_NP" ~  "United Kingdom", 
+                  ccode == "GBRTENW" ~ "England and Wales",
+                  ccode == "GBR_SCO" ~ "Scotland",
+                  ccode == "GBR_NIR" ~ "Northern Ireland",
+                  TRUE ~ Name)
+    )
+
+
+
+read_country <- function(CNTRY, item) {
+  readHFDweb(
+    CNTRY = CNTRY,
+    item = item,
+    username = key_list("human-mortality-database")$username,
+    password = key_get(
+      service = "human-mortality-database",
+      username = key_list("human-mortality-database")$username
+    )
+  )
+}
+
+
+read_countries_item <- function(countries, item){
+    countries %>%
+        map_dfr(function(ccode) {
+            read_country(ccode, item) %>%
+                mutate(ccode = ccode)
+        }) %>%
+        tibble() %>% 
+        left_join(hfdcodes, by = "ccode")
+}
+
+
+CNTRIES <- hfdcodes %>% 
+    filter(Name %in% c("Sweden", "Norway", "Finland")) %>% 
+    pull(ccode)
+
+```
+
+```{r}
+totbirthsSWE_NOR_FIN <- read_countries_item(countries = CNTRIES, item = "totbirthsRR")
+
+totbirthsSWE_NOR_FIN %>% 
+    mutate(TotalM = Total / 1000000) %>% 
+    ggplot( 
+       mapping = aes(x = Year, y = TotalM)) +
+    geom_line() +
+    facet_wrap(~Name, ncol = 1, scales = "free_y") +
+    ylab("Live Births") +
+    xlab("Year")
+
+```
+
+```{r}
+mabSWE_NOR_FIN <- read_countries_item(countries = CNTRIES, item = "mabRR")
+
+mabSWE_NOR_FIN %>% 
+    # mutate(TotalM = Total / 1000000) %>% 
+    ggplot( 
+       mapping = aes(x = Year, y = MAB)) +
+    geom_line() +
+    facet_wrap(~Name, ncol = 1, scales = "free_y") +
+    ylab("Mean age of birth") +
+    xlab("year")
+```
+
