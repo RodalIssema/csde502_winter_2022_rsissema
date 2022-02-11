@@ -8,7 +8,10 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-pacman::p_load(tidyverse, magrittr, ISOcodes, HMDHFDplus, keyring)
+pacman::p_load(tidyverse, magrittr, ISOcodes, HMDHFDplus, keyring, captioner)
+
+figure_nums <- captioner(prefix = "Figure")
+
 ```
 
 ## R Markdown
@@ -22,21 +25,9 @@ isocodes <- ISO_3166_1 %>% tibble() %>% select(ccode = Alpha_3, Name)
 
 # join ISO codes with country names
 hfdcodes %<>% 
-  left_join(isocodes, by = "ccode") %>% 
-  mutate(Name = 
-        case_when(ccode == "FRATNP" ~  "France",
-                  ccode == "DEUTNP" ~  "Germany",
-                  ccode == "DEUTE" ~   "East Germany",
-                  ccode == "DEUTW" ~   "West Germany",
-                  ccode == "GBR_NP" ~  "United Kingdom", 
-                  ccode == "GBRTENW" ~ "England and Wales",
-                  ccode == "GBR_SCO" ~ "Scotland",
-                  ccode == "GBR_NIR" ~ "Northern Ireland",
-                  TRUE ~ Name)
-    )
+  left_join(isocodes, by = "ccode") 
 
-
-
+#Function download data
 read_country <- function(CNTRY, item) {
   readHFDweb(
     CNTRY = CNTRY,
@@ -49,7 +40,7 @@ read_country <- function(CNTRY, item) {
   )
 }
 
-
+#Function to read items
 read_countries_item <- function(countries, item){
     countries %>%
         map_dfr(function(ccode) {
@@ -60,12 +51,14 @@ read_countries_item <- function(countries, item){
         left_join(hfdcodes, by = "ccode")
 }
 
-
+# Countries of interest
 CNTRIES <- hfdcodes %>% 
     filter(Name %in% c("Sweden", "Norway", "Finland")) %>% 
     pull(ccode)
 
 ```
+
+## Live births
 
 ```{r}
 totbirthsSWE_NOR_FIN <- read_countries_item(countries = CNTRIES, item = "totbirthsRR")
@@ -80,6 +73,10 @@ totbirthsSWE_NOR_FIN %>%
     xlab("Year")
 
 ```
+\    
+*`r figure_nums(name = "LiveBirths", caption = "Live births x 1 million: Sweden, Norway, and Finland (Y scale not standardized)")`*
+
+## Mean Age at birth
 
 ```{r}
 mabSWE_NOR_FIN <- read_countries_item(countries = CNTRIES, item = "mabRR")
@@ -90,7 +87,9 @@ mabSWE_NOR_FIN %>%
        mapping = aes(x = Year, y = MAB)) +
     geom_line() +
     facet_wrap(~Name, ncol = 1, scales = "free_y") +
-    ylab("Mean age of birth") +
+    ylab("Mean age at birth") +
     xlab("year")
 ```
 
+\    
+*`r figure_nums(name = "MeanAgeBirths", caption = "Mean age at birth: Sweden, Norway, and Finland (Y scale not standardized)")`*
