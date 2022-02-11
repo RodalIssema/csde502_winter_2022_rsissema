@@ -2,7 +2,16 @@
 title: "Assignment 05"
 author: "Rodal Issema"
 date: "2/10/2022"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+    toc_depth: 6
+    self_contained: true
+    number_sections: false
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
